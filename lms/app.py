@@ -14,7 +14,10 @@ from models import db, User, Course, Enrollment, Material, Assignment, Submissio
 
 from flask_wtf.csrf import CSRFProtect
 
-app = Flask(__name__)
+if os.environ.get('VERCEL'):
+    app = Flask(__name__, instance_path='/tmp/instance')
+else:
+    app = Flask(__name__)
 app.config.from_object(Config)
 
 db.init_app(app)
