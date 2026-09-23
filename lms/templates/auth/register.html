@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="csrf-token" content="{{ csrf_token() }}"/>
+  <title>Register — EduLearn LMS</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-container">
+    {% for category, message in messages %}
+    <div class="flash-msg {{ category }}">
+      <i class="ri-{% if category == 'success' %}check-line{% elif category == 'error' %}error-warning-line{% else %}information-line{% endif %}"></i>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<div class="auth-page">
+  <div class="auth-bg-glow tl"></div>
+  <div class="auth-bg-glow br"></div>
+
+  <div class="auth-card" style="max-width:500px">
+    <div class="auth-logo">
+      <div class="logo-circle"><i class="ri-graduation-cap-fill"></i></div>
+      <h1>Create Account</h1>
+      <p>Join EduLearn — Start Your Journey</p>
+    </div>
+
+    <!-- Role Selector -->
+    <div class="role-selector">
+      <button type="button" class="role-btn selected" data-role="student" onclick="selectRole('student', this)">
+        <i class="ri-user-line"></i>Student
+      </button>
+      <button type="button" class="role-btn" data-role="educator" onclick="selectRole('educator', this)">
+        <i class="ri-user-star-line"></i>Teacher
+      </button>
+    </div>
+    <input type="hidden" id="selected-role" value="student"/>
+
+    <form method="POST" action="{{ url_for('register') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="role" id="role-input" value="student"/>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <div class="input-icon-wrap">
+            <i class="ri-user-line input-icon"></i>
+            <input type="text" id="name" name="name" class="form-control"
+                   placeholder="John Doe" required/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <div class="input-icon-wrap">
+            <i class="ri-mail-line input-icon"></i>
+            <input type="email" id="email" name="email" class="form-control"
+                   placeholder="john@email.com" required/>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-icon-wrap">
+          <i class="ri-lock-line input-icon"></i>
+          <input type="password" id="password" name="password" class="form-control"
+                 placeholder="Min. 6 characters" required minlength="6"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="department">Department</label>
+        <div class="input-icon-wrap">
+          <i class="ri-building-line input-icon"></i>
+          <input type="text" id="department" name="department" class="form-control"
+                 placeholder="e.g. Computer Science, Electronics, Mechanical..."/>
+        </div>
+      </div>
+
+      <!-- Year field — for students only -->
+      <div class="form-group" id="year-group">
+        <label for="year">Academic Year</label>
+        <select id="year" name="year" class="form-control">
+          <option value="">Select Year</option>
+          <option value="1">1st Year</option>
+          <option value="2">2nd Year</option>
+          <option value="3">3rd Year</option>
+          <option value="4">4th Year</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:8px">
+        <i class="ri-user-add-line"></i> Create Account
+      </button>
+    </form>
+
+    <div class="auth-divider">Already have an account?</div>
+    <a href="{{ url_for('login') }}" class="btn btn-ghost btn-full">
+      <i class="ri-login-box-line"></i> Sign In
+    </a>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  function selectRole(role, btn) {
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('role-input').value = role;
+    const yearGrp = document.getElementById('year-group');
+    yearGrp.style.display = role === 'student' ? 'block' : 'none';
+  }
+</script>
+</body>
+</html>

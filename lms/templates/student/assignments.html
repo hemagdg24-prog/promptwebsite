@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}My Assignments — EduLearn{% endblock %}
+{% block page_title %}Assignments{% endblock %}
+{% block page_subtitle %}All your assignments across enrolled courses{% endblock %}
+
+{% block content %}
+<!-- Summary Stats -->
+<div class="grid-3 mb-24">
+  {% set total = all_assignments|length %}
+  {% set submitted_count = submissions|length %}
+  {% set graded_count = submissions.values()|selectattr('status', 'equalto', 'graded')|list|length %}
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(79,70,229,0.15);color:#4f46e5"><i class="ri-file-list-line"></i></div>
+    <div><div class="stat-label">Total</div><div class="stat-value">{{ total }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><i class="ri-check-double-line"></i></div>
+    <div><div class="stat-label">Submitted</div><div class="stat-value">{{ submitted_count }}</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(234,179,8,0.15);color:#eab308"><i class="ri-star-line"></i></div>
+    <div><div class="stat-label">Graded</div><div class="stat-value">{{ graded_count }}</div></div>
+  </div>
+</div>
+
+<!-- Assignments List -->
+{% if all_assignments %}
+  {% for asgn in all_assignments %}
+  {% set sub = submissions.get(asgn.id) %}
+  {% set days = asgn.days_until_deadline() %}
+  <div class="assignment-card {% if sub %}submitted{% elif asgn.is_overdue() %}overdue{% elif days <= 3 %}upcoming{% endif %}">
+    <div class="asgn-header">
+      <div style="flex:1; min-width:0">
+        <div class="asgn-title">{{ asgn.title }}</div>
+        <div class="asgn-meta">
+          <span><i class="ri-book-line"></i>{{ asgn.course.title }}</span>
+          <span class="{% if asgn.is_overdue() and not sub %}deadline-red{% elif days <= 3 and not sub %}deadline-orange{% else %}text-muted{% endif %}">
+            <i class="ri-time-line"></i>
+            {{ asgn.deadline.strftime('%d %b %Y, %H:%M') }}
+            {% if not asgn.is_overdue() %} · {{ days }}d left{% elif not sub %} · Overdue{% endif %}
+          </span>
+          <span><i class="ri-medal-line"></i>{{ asgn.max_marks }} marks</span>
+        </div>
+        {% if asgn.description %}
+        <p class="text-sm text-secondary mt-8">{{ asgn.description[:120] }}{% if asgn.description|length > 120 %}...{% endif %}</p>
+        {% endif %}
+      </div>
+      <div style="text-align:right; flex-shrink:0">
+        {% if sub %}
+          {% if sub.status == 'graded' %}
+            <div class="badge badge-grade mb-8" style="display:block">
+              <i class="ri-star-fill"></i>{{ sub.marks }}/{{ asgn.max_marks }}
+            </div>
+            <div class="text-xs text-muted">Graded</div>
+          {% else %}
+            <div class="badge badge-active" style="display:block"><i class="ri-check-line"></i>Submitted</div>
+            <div class="text-xs text-muted mt-4">{{ sub.submitted_at.strftime('%d %b') }}</div>
+          {% endif %}
+        {% elif not asgn.is_overdue() %}
+          <a href="{{ url_for('student_course_detail', course_id=asgn.course_id) }}#assignments"
+             class="btn btn-primary btn-sm"><i class="ri-upload-line"></i>Submit</a>
+        {% else %}
+          <span class="badge badge-archived"><i class="ri-close-circle-line"></i>Missed</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if sub and sub.feedback %}
+    <div class="mt-8" style="padding:10px;background:var(--bg-card-2);border-radius:var(--radius-sm);border-left:3px solid var(--accent)">
+      <div class="text-xs text-muted mb-4"><i class="ri-message-2-line"></i> Educator Feedback</div>
+      <p class="text-sm">{{ sub.feedback }}</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <i class="ri-task-line"></i>
+    <h3>No assignments yet</h3>
+    <p>Enroll in courses to get assignments from your educators.</p>
+  </div>
+{% endif %}
+{% endblock %}

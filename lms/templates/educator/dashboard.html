@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Educator Dashboard — EduLearn{% endblock %}
+{% block page_title %}Educator Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back, {{ current_user.name.split()[0] }}! Manage your courses and students.{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(79,70,229,0.15);color:#4f46e5"><i class="ri-book-line"></i></div>
+    <div>
+      <div class="stat-label">My Courses</div>
+      <div class="stat-value">{{ courses|length }}</div>
+      <div class="stat-change"><i class="ri-arrow-up-line"></i>Active</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981"><i class="ri-team-line"></i></div>
+    <div>
+      <div class="stat-label">Total Students</div>
+      <div class="stat-value">{{ total_students }}</div>
+      <div class="stat-change">Enrolled</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(249,115,22,0.15);color:#f97316"><i class="ri-task-line"></i></div>
+    <div>
+      <div class="stat-label">Assignments</div>
+      <div class="stat-value">{{ total_assignments }}</div>
+      <div class="stat-change">Created</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(239,68,68,0.15);color:#ef4444"><i class="ri-error-warning-line"></i></div>
+    <div>
+      <div class="stat-label">Pending Grades</div>
+      <div class="stat-value">{{ pending_grading }}</div>
+      <div class="stat-change" style="color:var(--orange)">Need review</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="gap:24px">
+  <!-- My Courses Quick View -->
+  <div>
+    <div class="section-header">
+      <div><h2>My Courses</h2><p>Manage and monitor</p></div>
+      <a href="{{ url_for('educator_new_course') }}" class="btn btn-primary btn-sm">
+        <i class="ri-add-line"></i>New Course
+      </a>
+    </div>
+
+    {% if courses %}
+      {% for course in courses[:4] %}
+      <div class="card card-sm mb-16">
+        <div class="flex items-center gap-12">
+          <div class="course-icon" style="background:rgba(79,70,229,0.1);color:{{ course.icon_color }};width:40px;height:40px;min-width:40px">
+            <i class="{{ course.icon }}"></i>
+          </div>
+          <div style="flex:1; min-width:0">
+            <div class="font-bold truncate">{{ course.title }}</div>
+            <div class="text-sm text-muted">
+              <span><i class="ri-team-line"></i> {{ course.enrollment_count() }} students</span>
+              &nbsp;·&nbsp;
+              <span><i class="ri-task-line"></i> {{ course.assignments.count() }} assignments</span>
+            </div>
+          </div>
+          <span class="badge badge-{{ course.status }}">{{ course.status }}</span>
+        </div>
+        <div class="flex gap-8 mt-12">
+          <a href="{{ url_for('educator_materials', course_id=course.id) }}" class="btn btn-ghost btn-sm">
+            <i class="ri-file-upload-line"></i>Materials
+          </a>
+          <a href="{{ url_for('educator_assignments', course_id=course.id) }}" class="btn btn-ghost btn-sm">
+            <i class="ri-task-line"></i>Assignments
+          </a>
+          <a href="{{ url_for('educator_attendance', course_id=course.id) }}" class="btn btn-ghost btn-sm">
+            <i class="ri-calendar-check-line"></i>Attendance
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+      {% if courses|length > 4 %}
+      <a href="{{ url_for('educator_courses') }}" class="btn btn-ghost btn-full">View All {{ courses|length }} Courses</a>
+      {% endif %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ri-book-line"></i>
+        <h3>No courses yet</h3>
+        <p>Create your first course to get started!</p>
+        <a href="{{ url_for('educator_new_course') }}" class="btn btn-primary" style="margin-top:12px">
+          <i class="ri-add-line"></i>Create Course
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Right Column: Recent Submissions + Notifications -->
+  <div>
+    <div class="section-header">
+      <div><h2>Recent Submissions</h2><p>Students who submitted assignments</p></div>
+    </div>
+
+    {% if recent_submissions %}
+      {% for sub in recent_submissions %}
+      <div class="flex items-center gap-12 mb-16" style="padding:12px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-sm)">
+        <div class="user-avatar" style="background:{{ sub.student.avatar_color }};width:36px;height:36px;font-size:12px;flex-shrink:0">
+          {{ sub.student.get_initials() }}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="text-sm font-semibold truncate">{{ sub.student.name }}</div>
+          <div class="text-xs text-muted truncate">{{ sub.assignment.title }} · {{ sub.assignment.course.title }}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          {% if sub.marks is not none %}
+            <span class="badge badge-grade">{{ sub.marks }}/{{ sub.assignment.max_marks }}</span>
+          {% else %}
+            <a href="{{ url_for('educator_assignments', course_id=sub.assignment.course_id) }}"
+               class="btn btn-primary btn-sm">Grade</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state" style="padding:32px">
+        <i class="ri-inbox-line"></i>
+        <h3>No submissions yet</h3>
+        <p>Students will submit here once assignments are posted.</p>
+      </div>
+    {% endif %}
+
+    <!-- Notifications -->
+    <div class="section-header mt-24">
+      <div><h2>Notifications</h2></div>
+    </div>
+    {% for notif in notifications %}
+    <div class="flex gap-12 mb-12 items-center">
+      <div class="notif-icon {{ notif.notif_type }}" style="width:30px;height:30px;border-radius:50%;flex-shrink:0;font-size:13px">
+        <i class="ri-{% if notif.notif_type == 'info' %}information-line{% else %}alert-line{% endif %}"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="text-sm font-semibold truncate">{{ notif.title }}</div>
+        <div class="text-xs text-muted">{{ notif.created_at.strftime('%d %b, %H:%M') }}</div>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-muted">No notifications.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Browse Courses — EduLearn{% endblock %}
+{% block page_title %}Browse Courses{% endblock %}
+{% block page_subtitle %}Find and enroll in courses for your department and year{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card card-sm mb-24">
+  <form method="GET" action="{{ url_for('student_courses') }}" class="flex gap-12 flex-wrap items-center">
+    <div class="search-bar" style="flex:1;max-width:350px">
+      <i class="ri-search-line"></i>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search courses..."/>
+    </div>
+    <select name="dept" class="form-control" style="width:auto;min-width:180px">
+      <option value="">All Departments</option>
+      {% for d in departments %}
+      <option value="{{ d[0] }}" {% if dept == d[0] %}selected{% endif %}>{{ d[0] }}</option>
+      {% endfor %}
+    </select>
+    <select name="year" class="form-control" style="width:auto;min-width:140px">
+      <option value="">All Years</option>
+      {% for y in [1,2,3,4] %}
+      <option value="{{ y }}" {% if year|string == y|string %}selected{% endif %}>Year {{ y }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm"><i class="ri-filter-line"></i>Filter</button>
+    <a href="{{ url_for('student_courses') }}" class="btn btn-ghost btn-sm">Reset</a>
+  </form>
+</div>
+
+<!-- Course Grid -->
+<div class="section-header">
+  <div><h2>Available Courses</h2><p>{{ courses|length }} course{{ 's' if courses|length != 1 }} found</p></div>
+</div>
+
+{% if courses %}
+<div class="grid-auto">
+  {% for course in courses %}
+  <div class="course-card">
+    <div class="course-icon" style="background:rgba(79,70,229,0.1); color:{{ course.icon_color }}">
+      <i class="{{ course.icon }}"></i>
+    </div>
+    <h3>{{ course.title }}</h3>
+    <p>{{ course.description[:100] }}{% if course.description and course.description|length > 100 %}...{% endif %}</p>
+    <div class="course-meta mb-16">
+      <span><i class="ri-user-star-line"></i>{{ course.educator.name }}</span>
+      <span><i class="ri-team-line"></i>{{ course.enrollment_count() }} enrolled</span>
+      {% if course.year %}<span><i class="ri-calendar-line"></i>Year {{ course.year }}</span>{% endif %}
+      {% if course.department %}<span><i class="ri-building-line"></i>{{ course.department }}</span>{% endif %}
+    </div>
+
+    {% if course.id in enrolled_ids %}
+      <div class="flex gap-8">
+        <span class="badge badge-active" style="padding:6px 14px"><i class="ri-check-line"></i>Enrolled</span>
+        <a href="{{ url_for('student_course_detail', course_id=course.id) }}" class="btn btn-ghost btn-sm flex-1" style="justify-content:center">Open Course</a>
+      </div>
+    {% else %}
+      <form method="POST" action="{{ url_for('enroll_course', course_id=course.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn-primary btn-full btn-sm">
+          <i class="ri-add-circle-line"></i>Enroll Now
+        </button>
+      </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <i class="ri-search-line"></i>
+  <h3>No courses found</h3>
+  <p>Try adjusting your filters or search query.</p>
+</div>
+{% endif %}
+{% endblock %}

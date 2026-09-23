@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Student Dashboard — EduLearn{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Hello, {{ current_user.name.split()[0] }}! Continue your learning journey 🚀{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(79,70,229,0.15); color:#4f46e5"><i class="ri-book-open-line"></i></div>
+    <div>
+      <div class="stat-label">My Courses</div>
+      <div class="stat-value">{{ enrollments|length }}</div>
+      <div class="stat-change"><i class="ri-arrow-up-line"></i> Enrolled</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(249,115,22,0.15); color:#f97316"><i class="ri-task-line"></i></div>
+    <div>
+      <div class="stat-label">Assignments</div>
+      <div class="stat-value">{{ upcoming_assignments|length }}</div>
+      <div class="stat-change" style="color:var(--orange)">Upcoming</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(16,185,129,0.15); color:#10b981"><i class="ri-bar-chart-line"></i></div>
+    <div>
+      <div class="stat-label">Avg. Progress</div>
+      <div class="stat-value">
+        {% if enrollments %}
+          {{ ((enrollments|sum(attribute='progress_percent')) / enrollments|length)|round(0)|int }}%
+        {% else %}0%{% endif %}
+      </div>
+      <div class="stat-change">Overall</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(239,68,68,0.15); color:#ef4444"><i class="ri-notification-3-line"></i></div>
+    <div>
+      <div class="stat-label">Notifications</div>
+      <div class="stat-value">{{ current_user.unread_notifications_count() }}</div>
+      <div class="stat-change" style="color:var(--red)">Unread</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="gap:24px">
+  <!-- My Enrolled Courses -->
+  <div>
+    <div class="section-header">
+      <div><h2>My Enrolled Courses</h2><p>Track your learning progress</p></div>
+      <a href="{{ url_for('student_courses') }}" class="btn btn-ghost btn-sm"><i class="ri-add-line"></i>Browse More</a>
+    </div>
+
+    {% if enrolled_courses %}
+      {% for course in enrolled_courses[:4] %}
+      {% set enrollment = enrollments | selectattr('course_id', 'equalto', course.id) | first %}
+      <div class="card card-sm mb-16" style="cursor:pointer" onclick="location.href='{{ url_for('student_course_detail', course_id=course.id) }}'">
+        <div class="flex items-center gap-12 mb-16">
+          <div class="course-icon" style="background:rgba(79,70,229,0.12); color:{{ course.icon_color }}; width:40px;height:40px;min-width:40px">
+            <i class="{{ course.icon }}"></i>
+          </div>
+          <div style="flex:1; min-width:0">
+            <div class="font-bold truncate">{{ course.title }}</div>
+            <div class="text-sm text-muted">{{ course.educator.name }}</div>
+          </div>
+          <a href="{{ url_for('student_course_detail', course_id=course.id) }}" class="btn btn-ghost btn-sm">Open</a>
+        </div>
+        <div class="progress-label">
+          <span class="text-sm text-secondary">Progress</span>
+          <strong class="text-sm">{{ enrollment.progress_percent|int }}%</strong>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill {% if enrollment.progress_percent >= 70 %}green{% elif enrollment.progress_percent >= 40 %}{% else %}{% endif %}"
+               style="width:{{ enrollment.progress_percent }}%"
+               data-width="{{ enrollment.progress_percent }}%"></div>
+        </div>
+        {% set next_asgn = upcoming_assignments | selectattr('course', 'equalto', course) | first %}
+        {% if next_asgn %}
+        <div class="text-xs text-muted mt-8">
+          <i class="ri-time-line"></i>
+          Next: {{ next_asgn.assignment.title }} — due {{ next_asgn.assignment.deadline.strftime('%d %b') }}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state">
+        <i class="ri-book-open-line"></i>
+        <h3>No courses yet</h3>
+        <p>Browse and enroll in courses to start learning!</p>
+        <a href="{{ url_for('student_courses') }}" class="btn btn-primary" style="margin-top:12px"><i class="ri-add-line"></i>Browse Courses</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Right Column -->
+  <div>
+    <!-- Upcoming Assignments -->
+    <div class="section-header">
+      <div><h2>Upcoming Assignments</h2><p>Submit before the deadline</p></div>
+      <a href="{{ url_for('student_assignments') }}" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+
+    {% if upcoming_assignments %}
+      {% for item in upcoming_assignments %}
+      {% set asgn = item.assignment %}
+      {% set days = asgn.days_until_deadline() %}
+      <div class="assignment-card {% if item.submitted %}submitted{% elif days <= 1 %}overdue{% elif days <= 3 %}upcoming{% endif %}">
+        <div class="asgn-header">
+          <div>
+            <div class="asgn-title">{{ asgn.title }}</div>
+            <div class="asgn-meta">
+              <span><i class="ri-book-line"></i>{{ item.course.title }}</span>
+              <span class="{% if days <= 1 %}deadline-red{% elif days <= 3 %}deadline-orange{% else %}text-muted{% endif %}">
+                <i class="ri-time-line"></i>
+                {% if days == 0 %}Due today!{% elif days == 1 %}Due tomorrow{% else %}{{ days }} days left{% endif %}
+              </span>
+            </div>
+          </div>
+          {% if item.submitted %}
+            <span class="badge badge-active"><i class="ri-check-line"></i>Submitted</span>
+          {% else %}
+            <a href="{{ url_for('student_course_detail', course_id=item.course.id) }}" class="btn btn-primary btn-sm">Submit</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state" style="padding:32px">
+        <i class="ri-check-double-line"></i>
+        <h3>All caught up!</h3>
+        <p>No upcoming assignments right now.</p>
+      </div>
+    {% endif %}
+
+    <!-- Recent Notifications -->
+    <div class="section-header mt-24">
+      <div><h2>Notifications</h2><p>Latest updates</p></div>
+    </div>
+    {% for notif in notifications %}
+    <div class="flex gap-12 mb-16 items-center">
+      <div class="notif-icon {{ notif.notif_type }}" style="width:32px;height:32px;border-radius:50%;flex-shrink:0">
+        <i class="ri-{% if notif.notif_type == 'deadline' %}time-line{% elif notif.notif_type == 'grade' %}star-line{% elif notif.notif_type == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="text-sm font-semibold truncate">{{ notif.title }}</div>
+        <div class="text-xs text-muted">{{ notif.created_at.strftime('%d %b, %H:%M') }}</div>
+      </div>
+      {% if not notif.is_read %}<div style="width:6px;height:6px;background:var(--accent);border-radius:50%;flex-shrink:0"></div>{% endif %}
+    </div>
+    {% else %}
+    <p class="text-sm text-muted">No notifications yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

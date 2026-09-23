@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}My Progress — EduLearn{% endblock %}
+{% block page_title %}My Progress{% endblock %}
+{% block page_subtitle %}Track your learning performance across all courses{% endblock %}
+
+{% block content %}
+<!-- Overall Summary -->
+{% if progress_data %}
+{% set overall = (progress_data|sum(attribute='enrollment.progress_percent')) / progress_data|length %}
+<div class="card mb-24" style="background:linear-gradient(135deg,rgba(79,70,229,0.1),rgba(124,58,237,0.05));border-color:rgba(79,70,229,0.2)">
+  <div class="flex items-center gap-24 flex-wrap">
+    <div style="position:relative;width:110px;height:110px;flex-shrink:0">
+      <svg viewBox="0 0 100 100" style="transform:rotate(-90deg);width:110px;height:110px">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--bg-base)" stroke-width="10"/>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#grad)" stroke-width="10"
+                stroke-dasharray="{{ overall * 2.638 }} 263.8" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#4f46e5"/>
+            <stop offset="100%" style="stop-color:#7c3aed"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:var(--accent)">
+        {{ overall|round(0)|int }}%
+      </div>
+    </div>
+    <div>
+      <h2 style="font-size:22px;font-weight:800">Overall Course Completion</h2>
+      <p class="text-secondary mt-4">{{ progress_data|length }} of {{ progress_data|length }} courses enrolled</p>
+      <div class="flex gap-16 mt-12">
+        <div class="text-center">
+          <div style="font-size:20px;font-weight:700;color:var(--green)">
+            {{ progress_data|selectattr('avg_marks')|list|length }}
+          </div>
+          <div class="text-xs text-muted">Graded</div>
+        </div>
+        <div class="text-center">
+          <div style="font-size:20px;font-weight:700;color:var(--orange)">
+            {{ progress_data|sum(attribute='total_assignments') }}
+          </div>
+          <div class="text-xs text-muted">Total Assignments</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Per-Course Progress -->
+{% if progress_data %}
+<div class="section-header">
+  <div><h2>Course Breakdown</h2><p>Your progress and grades per course</p></div>
+</div>
+
+<div class="grid-2" style="gap:20px">
+  {% for item in progress_data %}
+  <div class="card">
+    <div class="flex items-center gap-12 mb-16">
+      <div class="course-icon" style="background:rgba(79,70,229,0.1);color:{{ item.course.icon_color }};width:44px;height:44px;min-width:44px">
+        <i class="{{ item.course.icon }}"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="font-bold truncate">{{ item.course.title }}</div>
+        <div class="text-sm text-muted">{{ item.course.educator.name }}</div>
+      </div>
+      <a href="{{ url_for('student_course_detail', course_id=item.course.id) }}" class="btn btn-ghost btn-sm">Open</a>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-label">
+      <span class="text-sm text-secondary">Course Progress</span>
+      <strong class="text-sm" style="color:var(--accent)">{{ item.enrollment.progress_percent|int }}%</strong>
+    </div>
+    <div class="progress-bar-wrap mb-16">
+      <div class="progress-bar-fill {% if item.enrollment.progress_percent >= 70 %}green{% endif %}"
+           style="width:{{ item.enrollment.progress_percent }}%"
+           data-width="{{ item.enrollment.progress_percent }}%"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-2" style="gap:12px">
+      <div style="background:var(--bg-base);border-radius:var(--radius-sm);padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--accent)">{{ item.graded_count }}/{{ item.total_assignments }}</div>
+        <div class="text-xs text-muted">Assignments Graded</div>
+      </div>
+      <div style="background:var(--bg-base);border-radius:var(--radius-sm);padding:12px;text-align:center">
+        {% if item.avg_marks is not none %}
+        <div style="font-size:22px;font-weight:800;color:{% if item.avg_marks >= 70 %}var(--green){% elif item.avg_marks >= 50 %}var(--orange){% else %}var(--red){% endif %}">
+          {{ item.avg_marks }}%
+        </div>
+        {% else %}
+        <div style="font-size:22px;font-weight:800;color:var(--text-muted)">—</div>
+        {% endif %}
+        <div class="text-xs text-muted">Avg. Score</div>
+      </div>
+    </div>
+
+    <div class="text-xs text-muted mt-12">
+      <i class="ri-calendar-line"></i> Enrolled {{ item.enrollment.enrolled_at.strftime('%d %b %Y') }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="ri-bar-chart-line"></i>
+  <h3>No progress data yet</h3>
+  <p>Enroll in courses and submit assignments to see your progress here.</p>
+  <a href="{{ url_for('student_courses') }}" class="btn btn-primary" style="margin-top:12px"><i class="ri-add-line"></i>Browse Courses</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Assignments — {{ course.title }} — EduLearn{% endblock %}
+{% block page_title %}{{ course.title }}{% endblock %}
+{% block page_subtitle %}Create assignments, monitor submissions & grade student work{% endblock %}
+
+{% block content %}
+<div class="mb-16 flex justify-between items-center flex-wrap gap-12">
+  <a href="{{ url_for('educator_courses') }}" class="btn btn-ghost btn-sm">
+    <i class="ri-arrow-left-line"></i> Back to Courses
+  </a>
+  <button class="btn btn-primary" onclick="openModal('createAssignmentModal')">
+    <i class="ri-add-line"></i> Create Assignment
+  </button>
+</div>
+
+<!-- Assignments Accordion / Cards -->
+{% if assignments_data %}
+<div class="flex flex-col gap-20">
+  {% for item in assignments_data %}
+  {% set asgn = item.assignment %}
+  <div class="card">
+    <div class="card-header justify-between items-center">
+      <div>
+        <div class="flex items-center gap-10">
+          <h3><i class="ri-task-line text-blue"></i> {{ asgn.title }}</h3>
+          {% if asgn.is_overdue() %}
+          <span class="badge badge-error">Closed / Overdue</span>
+          {% else %}
+          <span class="badge badge-active">Active</span>
+          {% endif %}
+        </div>
+        <div class="text-xs text-muted mt-4">
+          Deadline: <strong class="{% if asgn.is_overdue() %}text-red{% else %}text-orange{% endif %}">{{ asgn.deadline.strftime('%d %b %Y, %H:%M') }}</strong> •
+          Max Marks: <strong>{{ asgn.max_marks }}</strong>
+        </div>
+      </div>
+      <div class="flex items-center gap-16 text-sm">
+        <div>Submissions: <strong class="text-green">{{ item.submitted_count }} / {{ enrolled_students|length }}</strong></div>
+        <div>Graded: <strong>{{ item.graded_count }} / {{ item.submitted_count }}</strong></div>
+      </div>
+    </div>
+
+    {% if asgn.description %}
+    <p class="text-sm text-secondary mb-16" style="padding:0 4px">{{ asgn.description }}</p>
+    {% endif %}
+
+    <!-- Submissions Table -->
+    {% if item.submissions %}
+    <div class="table-wrap mt-16">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Submission Date</th>
+            <th>Submitted File</th>
+            <th>Status</th>
+            <th>Marks</th>
+            <th>Feedback</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sub in item.submissions %}
+          <tr>
+            <td>
+              <div class="flex items-center gap-10">
+                <div class="avatar" style="background:{{ sub.student.avatar_color }};width:32px;height:32px;font-size:12px">
+                  {{ sub.student.get_initials() }}
+                </div>
+                <div>
+                  <a href="{{ url_for('educator_student_profile', student_id=sub.student.id) }}" class="font-semibold text-sm">
+                    {{ sub.student.name }}
+                  </a>
+                  <div class="text-xs text-muted">{{ sub.student.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="text-xs text-muted">{{ sub.submitted_at.strftime('%d %b %Y, %H:%M') }}</td>
+            <td>
+              {% if sub.file_path %}
+              <a href="{{ url_for('uploaded_file', filename=sub.file_path) }}" target="_blank" class="btn btn-ghost btn-sm">
+                <i class="ri-file-download-line"></i> {{ sub.file_name or 'View File' }}
+              </a>
+              {% else %}
+              <span class="text-xs text-muted">Text response</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if sub.status == 'graded' %}
+              <span class="badge badge-completed">Graded</span>
+              {% else %}
+              <span class="badge badge-warning">Pending Grade</span>
+              {% endif %}
+            </td>
+            <td class="font-bold">
+              {% if sub.marks is not none %}
+              <span class="text-green">{{ sub.marks }} / {{ asgn.max_marks }}</span>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-xs text-muted max-w-200 truncate">{{ sub.feedback or '—' }}</td>
+            <td>
+              <button class="btn btn-primary btn-sm" onclick="openGradeModal('{{ sub.id }}', '{{ sub.student.name }}', '{{ sub.marks or '' }}', '{{ sub.feedback or '' }}', '{{ asgn.max_marks }}')">
+                <i class="ri-check-double-line"></i> {% if sub.status == 'graded' %}Re-grade{% else %}Grade{% endif %}
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:24px">
+      <i class="ri-inbox-archive-line"></i>
+      <p>No submissions received yet for this assignment.</p>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state card">
+  <i class="ri-task-line"></i>
+  <h3>No assignments created yet</h3>
+  <p>Create an assignment to set deadlines and collect student work.</p>
+  <button class="btn btn-primary mt-16" onclick="openModal('createAssignmentModal')">
+    <i class="ri-add-line"></i> Create Assignment
+  </button>
+</div>
+{% endif %}
+
+<!-- Create Assignment Modal -->
+<div class="modal-backdrop" id="createAssignmentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="ri-add-circle-line"></i> Create New Assignment</h3>
+      <button class="modal-close" onclick="closeModal('createAssignmentModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('educator_assignments', course_id=course.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="action" value="create"/>
+
+      <div class="form-group">
+        <label class="form-label">Assignment Title <span style="color:var(--red)">*</span></label>
+        <input type="text" name="title" class="form-control" placeholder="e.g. Assignment 1: Portfolio Building" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Deadline Date & Time <span style="color:var(--red)">*</span></label>
+          <input type="datetime-local" name="deadline" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Marks</label>
+          <input type="number" name="max_marks" class="form-control" value="100" min="1" max="1000">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Instructions / Description</label>
+        <textarea name="description" class="form-control" rows="4" placeholder="Detail the requirements, format, and grading rubric..."></textarea>
+      </div>
+
+      <div class="flex justify-end gap-12 mt-24">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('createAssignmentModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="ri-check-line"></i> Post Assignment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Grade Submission Modal -->
+<div class="modal-backdrop" id="gradeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="ri-award-line"></i> Grade Submission — <span id="gradeStudentName"></span></h3>
+      <button class="modal-close" onclick="closeModal('gradeModal')">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('educator_assignments', course_id=course.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="action" value="grade"/>
+      <input type="hidden" name="submission_id" id="gradeSubmissionId"/>
+
+      <div class="form-group">
+        <label class="form-label">Marks Awarded (out of <span id="gradeMaxMarks">100</span>) <span style="color:var(--red)">*</span></label>
+        <input type="number" step="0.5" name="marks" id="gradeMarksInput" class="form-control" placeholder="e.g. 85.5" required min="0">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Educator Feedback / Comments</label>
+        <textarea name="feedback" id="gradeFeedbackInput" class="form-control" rows="4" placeholder="Provide constructive feedback for the student..."></textarea>
+      </div>
+
+      <div class="flex justify-end gap-12 mt-24">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('gradeModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save & Notify Student</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openGradeModal(submissionId, studentName, marks, feedback, maxMarks) {
+  document.getElementById('gradeSubmissionId').value = submissionId;
+  document.getElementById('gradeStudentName').textContent = studentName;
+  document.getElementById('gradeMarksInput').value = marks;
+  document.getElementById('gradeFeedbackInput').value = feedback;
+  document.getElementById('gradeMaxMarks').textContent = maxMarks;
+  openModal('gradeModal');
+}
+</script>
+{% endblock %}

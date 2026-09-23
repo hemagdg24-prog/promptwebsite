@@ -1,0 +1,6 @@
+﻿lms/__pycache__/
+*.pyc
+lms/instance/
+.env
+.venv/
+venv/

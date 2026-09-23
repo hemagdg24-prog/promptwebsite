@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="csrf-token" content="{{ csrf_token() }}"/>
+  <meta name="description" content="LMS — Learn, Practice, Track and Grow. A comprehensive learning management system for students and educators."/>
+  <title>{% block title %}LMS — Learn Today, Lead Tomorrow{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-container">
+    {% for category, message in messages %}
+    <div class="flash-msg {{ category }}">
+      <i class="ri-{% if category == 'success' %}check-line{% elif category == 'error' %}error-warning-line{% elif category == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<div class="app-layout">
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="ri-graduation-cap-fill"></i></div>
+      <div class="logo-text">
+        <h2>EduLearn</h2>
+        <span>Learning Management</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      {% if current_user.role == 'student' %}
+      <div class="nav-section">
+        <div class="nav-section-label">Main</div>
+        <a class="nav-item" href="{{ url_for('student_dashboard') }}"><i class="ri-dashboard-line"></i><span>Dashboard</span></a>
+        <a class="nav-item" href="{{ url_for('student_courses') }}"><i class="ri-book-open-line"></i><span>Browse Courses</span></a>
+        <a class="nav-item" href="{{ url_for('student_assignments') }}"><i class="ri-task-line"></i><span>Assignments</span></a>
+        <a class="nav-item" href="{{ url_for('student_progress') }}"><i class="ri-bar-chart-line"></i><span>My Progress</span></a>
+      </div>
+
+      {% elif current_user.role == 'educator' %}
+      <div class="nav-section">
+        <div class="nav-section-label">Teaching</div>
+        <a class="nav-item" href="{{ url_for('educator_dashboard') }}"><i class="ri-dashboard-line"></i><span>Dashboard</span></a>
+        <a class="nav-item" href="{{ url_for('educator_courses') }}"><i class="ri-book-line"></i><span>My Courses</span></a>
+      </div>
+      {% endif %}
+
+      <div class="nav-section">
+        <div class="nav-section-label">Account</div>
+        <a class="nav-item" href="{{ url_for('logout') }}"><i class="ri-logout-box-line"></i><span>Logout</span></a>
+      </div>
+    </nav>
+
+    <div class="sidebar-user">
+      <div class="user-avatar" style="background: {{ current_user.avatar_color }}">
+        {{ current_user.get_initials() }}
+      </div>
+      <div class="user-info">
+        <div class="name">{{ current_user.name }}</div>
+        <div class="role">{{ current_user.role }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ────────────────────────────────────────────────── -->
+  <div class="main-content">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+        <p>{% block page_subtitle %}{% endblock %}</p>
+      </div>
+      <div class="topbar-right">
+        <!-- Notifications -->
+        <div style="position:relative">
+          <button class="icon-btn" id="notif-btn" title="Notifications">
+            <i class="ri-notification-3-line"></i>
+            {% if current_user.unread_notifications_count() > 0 %}
+            <span class="notif-dot"></span>
+            {% endif %}
+          </button>
+          <div class="notif-dropdown" id="notif-dropdown">
+            <div class="notif-header">
+              <h3>Notifications</h3>
+              <button class="btn btn-ghost btn-sm" onclick="markAllRead()">Mark all read</button>
+            </div>
+            <div class="notif-list" id="notif-list">
+              <div class="empty-state" style="padding:24px"><i class="ri-notification-line"></i><p>Loading...</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Avatar -->
+        <div class="user-avatar" style="background: {{ current_user.avatar_color }}; width:36px; height:36px; font-size:13px; cursor:default">
+          {{ current_user.get_initials() }}
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <div class="page-body">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<!-- AI Chat (students only) -->
+{% if current_user.role == 'student' %}
+<button class="ai-chat-btn" id="ai-chat-btn" title="AI Learning Assistant">
+  <div class="pulse-ring"></div>
+  <i class="ri-robot-line"></i>
+</button>
+
+<div class="ai-chat-window" id="ai-chat-window">
+  <div class="ai-header">
+    <i class="ri-robot-line"></i>
+    <div class="ai-header-text">
+      <h3>AI Learning Assistant</h3>
+      <p>Ask me anything about your courses!</p>
+    </div>
+    <i class="ri-close-line ai-close" id="ai-chat-close"></i>
+  </div>
+  <div class="ai-messages" id="ai-messages"></div>
+  <div class="ai-input-row">
+    <input class="ai-input" id="ai-chat-input" placeholder="Ask me anything..." type="text" autocomplete="off"/>
+    <button class="ai-send" id="ai-chat-send"><i class="ri-send-plane-fill"></i></button>
+  </div>
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% if current_user.role == 'student' %}
+<script src="{{ url_for('static', filename='js/ai_chat.js') }}"></script>
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

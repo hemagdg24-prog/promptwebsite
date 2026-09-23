@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }} — EduLearn{% endblock %}
+{% block page_title %}{{ course.title }}{% endblock %}
+{% block page_subtitle %}{{ course.educator.name }} · {{ course.department }}{% endblock %}
+
+{% block content %}
+<!-- Course Header -->
+<div class="card mb-24">
+  <div class="flex items-center gap-16 flex-wrap">
+    <div class="course-icon" style="background:rgba(79,70,229,0.1);color:{{ course.icon_color }};width:56px;height:56px;font-size:26px;border-radius:12px">
+      <i class="{{ course.icon }}"></i>
+    </div>
+    <div style="flex:1">
+      <h2 style="font-size:20px;font-weight:800">{{ course.title }}</h2>
+      <p class="text-secondary mt-4">{{ course.description or 'No description available.' }}</p>
+      <div class="course-meta mt-8">
+        <span><i class="ri-user-star-line"></i>{{ course.educator.name }}</span>
+        <span><i class="ri-team-line"></i>{{ course.enrollment_count() }} students</span>
+        {% if course.year %}<span><i class="ri-calendar-line"></i>Year {{ course.year }}</span>{% endif %}
+        <span class="badge badge-{{ course.status }}">{{ course.status }}</span>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div class="text-xs text-muted mb-8">Course Progress</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent)">{{ enrollment.progress_percent|int }}%</div>
+      <div class="progress-bar-wrap" style="width:120px;margin-top:8px">
+        <div class="progress-bar-fill" style="width:{{ enrollment.progress_percent }}%" data-width="{{ enrollment.progress_percent }}%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="materials">
+    <i class="ri-file-line"></i> Materials ({{ materials|length }})
+  </button>
+  <button class="tab-btn" data-tab="assignments">
+    <i class="ri-task-line"></i> Assignments ({{ assignments|length }})
+  </button>
+</div>
+
+<!-- Materials Tab -->
+<div id="materials" class="tab-panel">
+  {% if materials %}
+    {% for mat in materials %}
+    {% set icon_info = mat.get_icon() %}
+    <div class="material-item">
+      <div class="material-icon" style="background:rgba(79,70,229,0.08);color:{{ icon_info[1] }}">
+        <i class="{{ icon_info[0] }}"></i>
+      </div>
+      <div class="material-info">
+        <div class="title">{{ mat.title }}</div>
+        <div class="meta">
+          {{ mat.file_type|upper if mat.file_type else 'FILE' }} · {{ mat.file_size or '—' }}
+          · Uploaded {{ mat.uploaded_at.strftime('%d %b %Y') }}
+        </div>
+        {% if mat.description %}<div class="meta mt-4">{{ mat.description }}</div>{% endif %}
+      </div>
+      <div class="material-actions">
+        <a href="{{ url_for('uploaded_file', filename=mat.file_path) }}" target="_blank"
+           class="btn btn-ghost btn-sm" {% if not mat.file_path %}style="opacity:.4;pointer-events:none"{% endif %}>
+          <i class="ri-download-line"></i>Download
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="ri-folder-open-line"></i>
+      <h3>No materials yet</h3>
+      <p>Your educator will upload materials here soon.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Assignments Tab -->
+<div id="assignments" class="tab-panel" style="display:none">
+  {% if assignments %}
+    {% for asgn in assignments %}
+    {% set sub = submissions.get(asgn.id) %}
+    {% set days = asgn.days_until_deadline() %}
+    <div class="assignment-card {% if sub %}submitted{% elif asgn.is_overdue() %}overdue{% elif days <= 3 %}upcoming{% endif %}">
+      <div class="asgn-header">
+        <div>
+          <div class="asgn-title">{{ asgn.title }}</div>
+          <div class="asgn-meta">
+            <span class="{% if asgn.is_overdue() %}deadline-red{% elif days <= 3 %}deadline-orange{% else %}text-muted{% endif %}">
+              <i class="ri-time-line"></i>
+              Deadline: {{ asgn.deadline.strftime('%d %b %Y, %H:%M') }}
+              {% if not asgn.is_overdue() %} ({{ days }} days left){% else %} (Overdue){% endif %}
+            </span>
+            <span><i class="ri-medal-line"></i>Max: {{ asgn.max_marks }} marks</span>
+          </div>
+        </div>
+        {% if sub %}
+          <span class="badge {% if sub.status == 'graded' %}badge-grade{% else %}badge-active{% endif %}">
+            {% if sub.status == 'graded' %}
+              <i class="ri-star-line"></i>Graded: {{ sub.marks }}/{{ asgn.max_marks }}
+            {% else %}
+              <i class="ri-check-line"></i>Submitted
+            {% endif %}
+          </span>
+        {% elif not asgn.is_overdue() %}
+          <!-- Submit Modal trigger -->
+          <button class="btn btn-primary btn-sm" onclick="openModal('submit-{{ asgn.id }}')">
+            <i class="ri-upload-line"></i>Submit
+          </button>
+        {% else %}
+          <span class="badge badge-archived"><i class="ri-close-line"></i>Missed</span>
+        {% endif %}
+      </div>
+      {% if asgn.description %}
+      <p class="text-sm text-secondary mt-8">{{ asgn.description }}</p>
+      {% endif %}
+      {% if sub and sub.feedback %}
+      <div class="mt-8" style="padding:10px;background:var(--bg-card-2);border-radius:var(--radius-sm);border-left:3px solid var(--accent)">
+        <div class="text-xs text-muted mb-4">Educator Feedback</div>
+        <p class="text-sm">{{ sub.feedback }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Submit Modal -->
+    {% if not sub and not asgn.is_overdue() %}
+    <div class="modal-overlay" id="submit-{{ asgn.id }}">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Submit: {{ asgn.title }}</h3>
+          <button class="modal-close" onclick="closeModal('submit-{{ asgn.id }}')"><i class="ri-close-line"></i></button>
+        </div>
+        <form method="POST" action="{{ url_for('submit_assignment', assignment_id=asgn.id) }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <div class="form-group">
+            <label>Upload Your Work</label>
+            <div class="file-upload-area">
+              <i class="ri-upload-cloud-line"></i>
+              <p><span>Click to upload</span> or drag & drop</p>
+              <p class="text-xs text-muted mt-4">PDF, DOC, DOCX, ZIP accepted</p>
+              <input type="file" name="file" style="display:none" accept=".pdf,.doc,.docx,.txt,.zip"/>
+            </div>
+          </div>
+          <div class="flex gap-8" style="justify-content:flex-end">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('submit-{{ asgn.id }}')">Cancel</button>
+            <button type="submit" class="btn btn-primary"><i class="ri-send-plane-line"></i>Submit Assignment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <i class="ri-task-line"></i>
+      <h3>No assignments yet</h3>
+      <p>Your educator hasn't posted any assignments yet.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

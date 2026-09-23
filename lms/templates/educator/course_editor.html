@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{% if course %}Edit {{ course.title }}{% else %}New Course{% endif %} — EduLearn{% endblock %}
+{% block page_title %}{% if course %}Edit Course{% else %}Create New Course{% endif %}{% endblock %}
+{% block page_subtitle %}{% if course %}Update details for {{ course.title }}{% else %}Fill in the details to publish a new course{% endif %}{% endblock %}
+
+{% block content %}
+<div class="mb-16">
+  <a href="{{ url_for('educator_courses') }}" class="btn btn-ghost btn-sm">
+    <i class="ri-arrow-left-line"></i> Back to Courses
+  </a>
+</div>
+
+<div class="card" style="max-width: 700px; margin: 0 auto;">
+  <div class="card-header">
+    <h3><i class="ri-book-read-line"></i> {% if course %}Edit Course Information{% else %}Course Details{% endif %}</h3>
+  </div>
+  <form method="POST" action="{% if course %}{{ url_for('educator_edit_course', course_id=course.id) }}{% else %}{{ url_for('educator_new_course') }}{% endif %}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <div class="form-group">
+      <label class="form-label" for="title">Course Title <span style="color:var(--red)">*</span></label>
+      <input type="text" id="title" name="title" class="form-control" placeholder="e.g. Advanced Web Development" value="{{ course.title if course else '' }}" required>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="department">Department</label>
+        <select id="department" name="department" class="form-control">
+          <option value="Computer Science" {% if course and course.department == 'Computer Science' %}selected{% endif %}>Computer Science</option>
+          <option value="Electronics" {% if course and course.department == 'Electronics' %}selected{% endif %}>Electronics</option>
+          <option value="Mechanical" {% if course and course.department == 'Mechanical' %}selected{% endif %}>Mechanical</option>
+          <option value="Civil Engineering" {% if course and course.department == 'Civil Engineering' %}selected{% endif %}>Civil Engineering</option>
+          <option value="Information Technology" {% if course and course.department == 'Information Technology' %}selected{% endif %}>Information Technology</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="year">Target Academic Year</label>
+        <select id="year" name="year" class="form-control">
+          <option value="">All Years</option>
+          <option value="1" {% if course and course.year|string == '1' %}selected{% endif %}>Year 1 (Freshman)</option>
+          <option value="2" {% if course and course.year|string == '2' %}selected{% endif %}>Year 2 (Sophomore)</option>
+          <option value="3" {% if course and course.year|string == '3' %}selected{% endif %}>Year 3 (Junior)</option>
+          <option value="4" {% if course and course.year|string == '4' %}selected{% endif %}>Year 4 (Senior)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="status">Publication Status</label>
+      <select id="status" name="status" class="form-control">
+        <option value="active" {% if course and course.status == 'active' %}selected{% endif %}>Active (Visible to Students)</option>
+        <option value="draft" {% if course and course.status == 'draft' %}selected{% endif %}>Draft (Hidden)</option>
+        <option value="archived" {% if course and course.status == 'archived' %}selected{% endif %}>Archived</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="description">Course Overview & Description</label>
+      <textarea id="description" name="description" class="form-control" rows="5" placeholder="Provide a detailed description of topics covered, prerequisites, and learning objectives...">{{ course.description if course else '' }}</textarea>
+    </div>
+
+    <div class="flex justify-end gap-12 mt-24">
+      <a href="{{ url_for('educator_courses') }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">
+        <i class="ri-save-line"></i> {% if course %}Save Changes{% else %}Create Course{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

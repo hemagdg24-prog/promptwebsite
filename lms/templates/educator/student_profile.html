@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ student.name }} — Student Profile — EduLearn{% endblock %}
+{% block page_title %}Student Profile{% endblock %}
+{% block page_subtitle %}Detailed performance, progress tracking & attendance for {{ student.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-16">
+  <button class="btn btn-ghost btn-sm" onclick="history.back()">
+    <i class="ri-arrow-left-line"></i> Back
+  </button>
+</div>
+
+<!-- Student Info Header Card -->
+<div class="card mb-24" style="background: linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(124,58,237,0.05) 100%); border: 1px solid var(--border);">
+  <div class="flex items-center gap-20 flex-wrap">
+    <div class="avatar" style="background:{{ student.avatar_color }};width:64px;height:64px;font-size:24px">
+      {{ student.get_initials() }}
+    </div>
+    <div class="flex-1 min-w-0">
+      <h2 style="font-size:22px;font-weight:700">{{ student.name }}</h2>
+      <div class="flex items-center gap-16 text-sm text-secondary mt-4 flex-wrap">
+        <span><i class="ri-mail-line"></i> {{ student.email }}</span>
+        <span><i class="ri-building-line"></i> {{ student.department or 'Unspecified Dept' }}</span>
+        <span><i class="ri-graduation-cap-line"></i> Year {{ student.year or 'N/A' }}</span>
+        <span><i class="ri-calendar-line"></i> Joined {{ student.created_at.strftime('%b %Y') }}</span>
+      </div>
+    </div>
+    <div class="badge badge-active font-semibold" style="padding:8px 16px;font-size:13px">
+      Active Student
+    </div>
+  </div>
+</div>
+
+<!-- Enrolled Courses Breakdown -->
+<h3 class="mb-16"><i class="ri-book-read-line text-blue"></i> Course Performance & Progress</h3>
+
+<div class="flex flex-col gap-20">
+  {% for item in student_data %}
+  {% set course = item.course %}
+  {% set enrollment = item.enrollment %}
+  <div class="card">
+    <div class="card-header justify-between items-center flex-wrap gap-12">
+      <div class="flex items-center gap-12">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(79,70,229,0.1);color:{{ course.icon_color }};display:flex;align-items:center;justify-content:center;font-size:18px">
+          <i class="{{ course.icon }}"></i>
+        </div>
+        <div>
+          <div class="font-bold text-base">{{ course.title }}</div>
+          <div class="text-xs text-muted">{{ course.department }}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-20 text-sm">
+        <div>
+          Overall Progress: <strong class="text-green">{{ enrollment.progress_percent }}%</strong>
+        </div>
+        <div>
+          Attendance: <strong class="{% if item.att_percent < 75 %}text-red{% else %}text-green{% endif %}">{{ item.att_percent }}%</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="mb-16">
+      <div class="progress-bar-container" style="height:8px">
+        <div class="progress-bar-fill" style="width:{{ enrollment.progress_percent }}%"></div>
+      </div>
+    </div>
+
+    <!-- Submissions Table for this course -->
+    {% if item.submissions %}
+    <h4 class="text-sm font-semibold mb-12 text-secondary">Assignment Submissions</h4>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Assignment Title</th>
+            <th>Submitted On</th>
+            <th>File</th>
+            <th>Marks Awarded</th>
+            <th>Educator Feedback</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sub in item.submissions %}
+          <tr>
+            <td class="font-semibold text-sm">{{ sub.assignment.title }}</td>
+            <td class="text-xs text-muted">{{ sub.submitted_at.strftime('%d %b %Y') }}</td>
+            <td>
+              {% if sub.file_path %}
+              <a href="{{ url_for('uploaded_file', filename=sub.file_path) }}" target="_blank" class="btn btn-ghost btn-sm">
+                <i class="ri-download-line"></i> View
+              </a>
+              {% else %}
+              <span class="text-xs text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if sub.marks is not none %}
+              <span class="font-bold text-green">{{ sub.marks }} / {{ sub.assignment.max_marks }}</span>
+              {% else %}
+              <span class="badge badge-warning">Pending Grade</span>
+              {% endif %}
+            </td>
+            <td class="text-xs text-muted">{{ sub.feedback or 'No feedback provided yet.' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-xs text-muted">No assignment submissions recorded for this course.</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — EduLearn{% endblock %}
+{% block page_title %}System Administration{% endblock %}
+{% block page_subtitle %}Platform overview, analytics, user & course management{% endblock %}
+
+{% block content %}
+<!-- Metrics Stats Row -->
+<div class="stats-row mb-24">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(79,70,229,0.15);color:#4f46e5">
+      <i class="ri-user-line"></i>
+    </div>
+    <div class="stat-value">{{ total_students }}</div>
+    <div class="stat-label">Total Registered Students</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(8,145,178,0.15);color:#0891b2">
+      <i class="ri-user-star-line"></i>
+    </div>
+    <div class="stat-value">{{ total_educators }}</div>
+    <div class="stat-label">Educators / Teachers</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#10b981">
+      <i class="ri-book-open-line"></i>
+    </div>
+    <div class="stat-value">{{ total_courses }}</div>
+    <div class="stat-label">Active Courses</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(249,115,22,0.15);color:#f97316">
+      <i class="ri-task-line"></i>
+    </div>
+    <div class="stat-value">{{ total_submissions }}</div>
+    <div class="stat-label">Assignment Submissions</div>
+  </div>
+</div>
+
+<!-- Chart & Recent Activity Grid -->
+<div class="grid-2 gap-24 mb-24">
+  <!-- Chart Card -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="ri-bar-chart-2-line text-purple"></i> Course Enrollment Analytics</h3>
+    </div>
+    <div style="position:relative;height:260px;width:100%">
+      <canvas id="enrollmentChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Recent Registered Users -->
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="ri-group-line text-blue"></i> Recent User Registrations</h3>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th>Department</th>
+            <th>Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in recent_users %}
+          <tr>
+            <td>
+              <div class="flex items-center gap-8">
+                <div class="avatar" style="background:{{ user.avatar_color }};width:28px;height:28px;font-size:11px">
+                  {{ user.get_initials() }}
+                </div>
+                <div>
+                  <div class="font-semibold text-sm">{{ user.name }}</div>
+                  <div class="text-xs text-muted">{{ user.email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if user.role == 'admin' %}
+              <span class="badge badge-error">Admin</span>
+              {% elif user.role == 'educator' %}
+              <span class="badge badge-warning">Educator</span>
+              {% else %}
+              <span class="badge badge-active">Student</span>
+              {% endif %}
+            </td>
+            <td class="text-xs text-secondary">{{ user.department or '—' }}</td>
+            <td class="text-xs text-muted">{{ user.created_at.strftime('%d %b %Y') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Platform Courses Table -->
+<div class="card">
+  <div class="card-header">
+    <h3><i class="ri-book-3-line text-green"></i> All Platform Courses</h3>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Course Title</th>
+          <th>Educator</th>
+          <th>Department</th>
+          <th>Year</th>
+          <th>Enrolled Students</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in courses %}
+        <tr>
+          <td>
+            <div class="flex items-center gap-10">
+              <div style="width:32px;height:32px;border-radius:6px;background:rgba(79,70,229,0.1);color:{{ course.icon_color }};display:flex;align-items:center;justify-content:center">
+                <i class="{{ course.icon }}"></i>
+              </div>
+              <span class="font-semibold text-sm">{{ course.title }}</span>
+            </div>
+          </td>
+          <td class="text-sm text-secondary">{{ course.educator.name }}</td>
+          <td class="text-sm text-secondary">{{ course.department }}</td>
+          <td class="text-sm text-secondary">{% if course.year %}Year {{ course.year }}{% else %}All{% endif %}</td>
+          <td class="font-bold text-sm text-green">{{ course.enrollment_count() }}</td>
+          <td><span class="badge badge-{{ course.status }}">{{ course.status }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const ctx = document.getElementById('enrollmentChart');
+  if (ctx) {
+    const labels = {{ course_labels|tojson }};
+    const data = {{ course_enrollments|tojson }};
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Students Enrolled',
+          data: data,
+          backgroundColor: 'rgba(79, 70, 229, 0.7)',
+          borderColor: '#4f46e5',
+          borderWidth: 1,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8b949e', font: { family: 'Inter', size: 11 } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#8b949e', font: { family: 'Inter', size: 11 }, precision: 0 }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

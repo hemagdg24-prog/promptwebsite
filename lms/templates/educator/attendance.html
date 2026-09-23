@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Attendance — {{ course.title }} — EduLearn{% endblock %}
+{% block page_title %}{{ course.title }}{% endblock %}
+{% block page_subtitle %}Track and monitor student attendance, update records & generate alerts{% endblock %}
+
+{% block content %}
+<div class="mb-16 flex justify-between items-center flex-wrap gap-12">
+  <a href="{{ url_for('educator_courses') }}" class="btn btn-ghost btn-sm">
+    <i class="ri-arrow-left-line"></i> Back to Courses
+  </a>
+</div>
+
+<div class="grid-2 gap-24">
+  <!-- Mark Attendance Form -->
+  <div>
+    <div class="card">
+      <div class="card-header justify-between items-center">
+        <h3><i class="ri-calendar-check-line text-green"></i> Mark Session Attendance</h3>
+      </div>
+      <form method="POST" action="{{ url_for('educator_attendance', course_id=course.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <div class="form-group mb-20">
+          <label class="form-label">Session Date <span style="color:var(--red)">*</span></label>
+          <input type="date" name="date" class="form-control" value="{{ today.strftime('%Y-%m-%d') }}" required>
+        </div>
+
+        {% if students %}
+        <div class="text-xs text-muted mb-12 font-semibold">STUDENTS ENROLLED ({{ students|length }})</div>
+        <div class="flex flex-col gap-12 max-h-400 style-scroll" style="overflow-y:auto;padding-right:4px">
+          {% for student in students %}
+          <div class="flex items-center justify-between gap-12" style="padding:10px 14px;background:var(--bg-card-2);border-radius:var(--radius-sm);">
+            <div class="flex items-center gap-10 min-w-0">
+              <div class="avatar" style="background:{{ student.avatar_color }};width:32px;height:32px;font-size:12px">
+                {{ student.get_initials() }}
+              </div>
+              <div class="min-w-0">
+                <div class="font-semibold text-sm truncate">{{ student.name }}</div>
+                <div class="text-xs text-muted">Year {{ student.year or 1 }}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-12">
+              <label class="flex items-center gap-4 text-xs cursor-pointer">
+                <input type="radio" name="status_{{ student.id }}" value="present" checked>
+                <span class="text-green font-semibold">Present</span>
+              </label>
+              <label class="flex items-center gap-4 text-xs cursor-pointer">
+                <input type="radio" name="status_{{ student.id }}" value="late">
+                <span class="text-orange font-semibold">Late</span>
+              </label>
+              <label class="flex items-center gap-4 text-xs cursor-pointer">
+                <input type="radio" name="status_{{ student.id }}" value="absent">
+                <span class="text-red font-semibold">Absent</span>
+              </label>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full mt-20">
+          <i class="ri-save-line"></i> Save Attendance & Notify Absentees
+        </button>
+        {% else %}
+        <div class="empty-state" style="padding:20px">
+          <i class="ri-user-add-line"></i>
+          <p>No students enrolled in this course yet.</p>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Attendance Summary & Analytics -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="ri-bar-chart-box-line text-purple"></i> Student Attendance Summary</h3>
+      </div>
+
+      {% if summary %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Present / Total</th>
+              <th>Attendance %</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in summary %}
+            {% set s = item.student %}
+            <tr>
+              <td>
+                <div class="flex items-center gap-10">
+                  <div class="avatar" style="background:{{ s.avatar_color }};width:28px;height:28px;font-size:11px">
+                    {{ s.get_initials() }}
+                  </div>
+                  <a href="{{ url_for('educator_student_profile', student_id=s.id) }}" class="font-semibold text-sm">
+                    {{ s.name }}
+                  </a>
+                </div>
+              </td>
+              <td class="text-sm font-semibold">{{ item.present }} / {{ item.total }}</td>
+              <td>
+                <div class="flex items-center gap-8">
+                  <div class="progress-bar-container" style="width:80px;height:6px">
+                    <div class="progress-bar-fill {% if item.percent < 75 %}danger{% elif item.percent < 85 %}warning{% endif %}" style="width:{{ item.percent }}%"></div>
+                  </div>
+                  <span class="text-xs font-bold {% if item.percent < 75 %}text-red{% else %}text-green{% endif %}">{{ item.percent }}%</span>
+                </div>
+              </td>
+              <td>
+                {% if item.percent >= 75 or item.total == 0 %}
+                <span class="badge badge-active">Good</span>
+                {% else %}
+                <span class="badge badge-error">Shortage</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="ri-user-line"></i>
+        <p>No attendance recorded yet.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Recent Session Dates -->
+    {% if recent_dates %}
+    <div class="card mt-20">
+      <div class="card-header">
+        <h3><i class="ri-history-line"></i> Past Sessions Recorded</h3>
+      </div>
+      <div class="flex flex-wrap gap-8">
+        {% for d in recent_dates %}
+        <span class="badge badge-info flex items-center gap-4" style="padding:6px 12px">
+          <i class="ri-calendar-line"></i> {{ d.strftime('%d %b %Y') }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

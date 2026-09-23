@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}403 Forbidden — EduLearn{% endblock %}
+{% block page_title %}Access Denied{% endblock %}
+{% block page_subtitle %}403 Forbidden Error{% endblock %}
+
+{% block content %}
+<div class="empty-state card" style="max-width:500px;margin:60px auto;padding:60px 24px">
+  <i class="ri-shield-keyhole-line" style="font-size:64px;color:var(--red);opacity:0.8"></i>
+  <h2 style="font-size:24px;margin:16px 0 8px">Access Denied (403)</h2>
+  <p style="color:var(--text-secondary);margin-bottom:24px">You do not have permission to view this page or perform this action.</p>
+  <a href="{{ url_for('index') }}" class="btn btn-primary">
+    <i class="ri-home-4-line"></i> Return to Dashboard
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Materials — {{ course.title }} — EduLearn{% endblock %}
+{% block page_title %}{{ course.title }}{% endblock %}
+{% block page_subtitle %}Manage learning materials (PDFs, PPTs, Videos, Images){% endblock %}
+
+{% block content %}
+<div class="mb-16">
+  <a href="{{ url_for('educator_courses') }}" class="btn btn-ghost btn-sm">
+    <i class="ri-arrow-left-line"></i> Back to Courses
+  </a>
+</div>
+
+<div class="grid-2 gap-24">
+  <!-- Upload Card -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="ri-upload-cloud-2-line"></i> Upload Learning Material</h3>
+      </div>
+      <form method="POST" action="{{ url_for('educator_materials', course_id=course.id) }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <div class="form-group">
+          <label class="form-label" for="title">Title / Topic Name</label>
+          <input type="text" id="title" name="title" class="form-control" placeholder="e.g. Chapter 1: Introduction to Algorithms">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Description (Optional)</label>
+          <textarea id="description" name="description" class="form-control" rows="3" placeholder="Short description of this material..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Select File <span style="color:var(--red)">*</span></label>
+          <div class="drag-area" id="dragArea">
+            <i class="ri-file-upload-line" style="font-size:36px;color:var(--accent);margin-bottom:8px"></i>
+            <div class="font-semibold text-sm">Drag & drop your file here, or browse</div>
+            <div class="text-xs text-muted mt-4">Supported: PDF, PPT/X, DOC/X, MP4, PNG, JPG (Max 100MB)</div>
+            <input type="file" id="fileInput" name="file" style="display:none" required>
+          </div>
+          <div id="fileSelected" class="text-xs text-green mt-8 font-semibold" style="display:none"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full mt-16">
+          <i class="ri-upload-2-line"></i> Upload Material
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Materials List -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="ri-folder-open-line"></i> Uploaded Materials ({{ materials|length }})</h3>
+      </div>
+      {% if materials %}
+      <div class="flex flex-col gap-12">
+        {% for mat in materials %}
+        {% set icon, color = mat.get_icon() %}
+        <div class="card flex items-center justify-between gap-12" style="padding: 14px 16px; background: var(--bg-card-2);">
+          <div class="flex items-center gap-12 min-w-0">
+            <div style="width:40px;height:40px;min-width:40px;border-radius:10px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;color:{{ color }};font-size:20px">
+              <i class="{{ icon }}"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="font-semibold text-sm truncate">{{ mat.title }}</div>
+              <div class="text-xs text-muted flex items-center gap-8">
+                <span>{{ mat.file_type|upper }}</span> •
+                <span>{{ mat.file_size or 'Unknown size' }}</span> •
+                <span>{{ mat.uploaded_at.strftime('%d %b %Y') }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-6">
+            {% if mat.file_path %}
+            <a href="{{ url_for('uploaded_file', filename=mat.file_path) }}" target="_blank" class="btn btn-ghost btn-sm" title="View / Download">
+              <i class="ri-download-2-line"></i>
+            </a>
+            {% endif %}
+            <form method="POST" action="{{ url_for('delete_material', material_id=mat.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+              <button type="submit" class="btn btn-danger btn-sm" title="Delete" data-confirm="Delete material '{{ mat.title }}'?">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <i class="ri-folder-add-line"></i>
+        <h3>No materials uploaded</h3>
+        <p>Use the form on the left to upload lecture slides, PDFs, or videos.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const dragArea = document.getElementById('dragArea');
+  const fileInput = document.getElementById('fileInput');
+  const fileSelected = document.getElementById('fileSelected');
+
+  if (dragArea && fileInput) {
+    dragArea.addEventListener('click', () => fileInput.click());
+    dragArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dragArea.style.borderColor = 'var(--accent)';
+      dragArea.style.background = 'rgba(79, 70, 229, 0.08)';
+    });
+    dragArea.addEventListener('dragleave', () => {
+      dragArea.style.borderColor = 'var(--border)';
+      dragArea.style.background = 'none';
+    });
+    dragArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragArea.style.borderColor = 'var(--border)';
+      dragArea.style.background = 'none';
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        showFile(fileInput.files[0]);
+      }
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) showFile(fileInput.files[0]);
+    });
+
+    function showFile(file) {
+      fileSelected.style.display = 'block';
+      fileSelected.textContent = 'Selected: ' + file.name + ' (' + (file.size/1024/1024).toFixed(2) + ' MB)';
+    }
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}404 Not Found — EduLearn{% endblock %}
+{% block page_title %}Page Not Found{% endblock %}
+{% block page_subtitle %}404 Error{% endblock %}
+
+{% block content %}
+<div class="empty-state card" style="max-width:500px;margin:60px auto;padding:60px 24px">
+  <i class="ri-compass-4-line" style="font-size:64px;color:var(--accent);opacity:0.8"></i>
+  <h2 style="font-size:24px;margin:16px 0 8px">Page Not Found (404)</h2>
+  <p style="color:var(--text-secondary);margin-bottom:24px">The requested page or resource could not be found on the server.</p>
+  <a href="{{ url_for('index') }}" class="btn btn-primary">
+    <i class="ri-home-4-line"></i> Return to Dashboard
+  </a>
+</div>
+{% endblock %}
