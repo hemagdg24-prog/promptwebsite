@@ -20,6 +20,9 @@ if os.environ.get('VERCEL'):
 app.config.from_object(Config)
 
 db.init_app(app)
+with app.app_context():
+    db.create_all()
+    
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
